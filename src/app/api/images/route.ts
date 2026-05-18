@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth-guard'
 import { listPrivateImages } from '@/lib/huawei-ims'
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {

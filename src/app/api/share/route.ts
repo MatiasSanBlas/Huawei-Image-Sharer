@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth-guard'
 import { shareImages } from '@/lib/huawei-ims'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-
+export const dynamic = 'force-dynamic'
 interface ShareRequest {
   imageIds: string[]
   targetType: 'project' | 'domain' | 'ou_urn'
