@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import Header from '@/components/Header'
+import { colors, radius, shadow, inputStyle } from '@/lib/theme'
 
 interface Image {
   id: string
   name: string
   osVersion: string
+  osType: string
+  osBit: string
+  platform: string
   size: number
   status: string
   createdAt: string
@@ -15,16 +19,45 @@ interface Image {
 
 type TargetType = 'project' | 'domain' | 'ou_urn'
 
-const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
-  { value: 'project', label: 'Project ID' },
-  { value: 'domain', label: 'Account ID (Domain)' },
-  { value: 'ou_urn', label: 'OU URN' },
+const TARGET_OPTIONS: { value: TargetType; label: string; placeholder: string }[] = [
+  { value: 'project', label: 'Project ID', placeholder: 'ej: 0a87231e6a00...' },
+  { value: 'domain', label: 'Account ID (Domain)', placeholder: 'ej: 09f7bd8e6a00...' },
+  { value: 'ou_urn', label: 'OU URN', placeholder: 'ej: urn:enterprise:...' },
 ]
 
 function formatBytes(bytes: number): string {
   if (!bytes) return 'N/A'
   const gb = bytes / (1024 * 1024 * 1024)
   return `${gb.toFixed(2)} GB`
+}
+
+function Spinner() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          border: `3px solid ${colors.border}`,
+          borderTopColor: colors.primary,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+function extractVersion(osVersion: string): string {
+  if (!osVersion) return ''
+  const winMatch = osVersion.match(/Windows Server (\d{4})\s*(Standard|Datacenter)?/i)
+  if (winMatch) {
+    return winMatch[2] ? `${winMatch[1]} ${winMatch[2]}` : winMatch[1]
+  }
+  const linuxMatch = osVersion.match(/(?:CentOS|Ubuntu|Debian|Red Hat|SUSE|EulerOS|OpenSUSE|Fedora|CoreOS)\s+([\d.]+)/i)
+  if (linuxMatch) return linuxMatch[1]
+  return osVersion.replace(/\s*64bit\s*/i, '').replace(/\s*32bit\s*/i, '').trim()
 }
 
 export default function DashboardPage() {
@@ -35,6 +68,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [sharing, setSharing] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [hoverRow, setHoverRow] = useState<string | null>(null)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterFamily, setFilterFamily] = useState('')
+  const [filterVersion, setFilterVersion] = useState('')
+  const [filterArch, setFilterArch] = useState('')
 
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession()
@@ -58,8 +97,7 @@ export default function DashboardPage() {
 
         if (!res.ok) {
           const errMsg = data.error || data.message || `Error ${res.status}`
-          const detail = data.stack ? `\n\n${data.stack}` : ''
-          setMessage({ type: 'err', text: `${errMsg}${detail}` })
+          setMessage({ type: 'err', text: errMsg })
           setImages([])
           setLoading(false)
           return
@@ -75,6 +113,81 @@ export default function DashboardPage() {
     fetchImages()
   }, [getToken])
 
+  useEffect(() => { setFilterVersion('') }, [filterFamily])
+  useEffect(() => { setFilterArch('') }, [filterFamily, filterVersion])
+
+  const filterOptions = useMemo(() => {
+    const families = new Set<string>()
+    images.forEach((img) => {
+      if (img.osType) families.add(img.osType)
+      else if (img.osVersion?.toLowerCase().includes('windows')) families.add('Windows')
+      else if (img.osVersion) families.add('Linux')
+    })
+
+    const familyMatched = images.filter((img) => {
+      if (!filterFamily) return true
+      if (img.osType && img.osType !== filterFamily) return false
+      if (!img.osType) {
+        const isWindows = img.osVersion?.toLowerCase().includes('windows')
+        if (filterFamily === 'Windows' && !isWindows) return false
+        if (filterFamily === 'Linux' && isWindows) return false
+      }
+      return true
+    })
+
+    const versions = new Set<string>()
+    familyMatched.forEach((img) => {
+      const ver = extractVersion(img.osVersion)
+      if (ver) versions.add(ver)
+    })
+
+    const versionMatched = familyMatched.filter((img) => {
+      if (!filterVersion) return true
+      return extractVersion(img.osVersion) === filterVersion
+    })
+
+    const archs = new Set<string>()
+    versionMatched.forEach((img) => {
+      if (img.osBit) archs.add(img.osBit)
+    })
+
+    return {
+      families: Array.from(families).sort(),
+      versions: Array.from(versions).sort(),
+      archs: Array.from(archs).sort(),
+    }
+  }, [images, filterFamily, filterVersion])
+
+  const filteredImages = useMemo(() => {
+    return images.filter((img) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesSearch = img.name.toLowerCase().includes(q) || img.id.toLowerCase().includes(q)
+        if (!matchesSearch) return false
+      }
+
+      if (filterFamily) {
+        if (img.osType && img.osType !== filterFamily) return false
+        if (!img.osType) {
+          const isWindows = img.osVersion?.toLowerCase().includes('windows')
+          if (filterFamily === 'Windows' && !isWindows) return false
+          if (filterFamily === 'Linux' && isWindows) return false
+        }
+      }
+
+      if (filterVersion) {
+        const ver = extractVersion(img.osVersion)
+        if (ver !== filterVersion) return false
+      }
+
+      if (filterArch) {
+        if (img.osBit !== filterArch) return false
+      }
+
+      return true
+    })
+  }, [images, searchQuery, filterFamily, filterVersion, filterArch])
+
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev)
@@ -85,10 +198,10 @@ export default function DashboardPage() {
   }
 
   function toggleAll() {
-    if (selected.size === images.length) {
+    if (selected.size === filteredImages.length) {
       setSelected(new Set())
     } else {
-      setSelected(new Set(images.map((i) => i.id)))
+      setSelected(new Set(filteredImages.map((i) => i.id)))
     }
   }
 
@@ -148,121 +261,240 @@ export default function DashboardPage() {
     }
   }
 
+  function clearFilters() {
+    setSearchQuery('')
+    setFilterFamily('')
+    setFilterVersion('')
+    setFilterArch('')
+  }
+
+  const hasActiveFilters = searchQuery || filterFamily || filterVersion || filterArch
+  const selectedPlaceholder = TARGET_OPTIONS.find((o) => o.value === targetType)?.placeholder || ''
+
+  const selectFilterStyle: React.CSSProperties = {
+    ...inputStyle,
+    boxSizing: 'border-box',
+    minWidth: 140,
+    appearance: 'none' as any,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2386909C' stroke-width='1.5'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 10px center',
+    paddingRight: 28,
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', background: colors.pageBg }}>
       <Header />
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-        <h1>Imagenes de SO - Cuenta Origen</h1>
-
-        {loading && <p>Cargando imagenes...</p>}
-
-        {!loading && images.length === 0 && !message && (
-          <p>No se encontraron imagenes privadas.</p>
-        )}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 48px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 600, color: colors.textPrimary }}>
+              Imagenes de SO
+            </h1>
+            <p style={{ margin: 0, fontSize: 13, color: colors.textSecondary }}>
+              Cuenta Origen · {filteredImages.length} de {images.length} imagen{images.length !== 1 ? 'es' : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {selected.size > 0 && (
+              <span style={{
+                padding: '4px 12px',
+                background: colors.primaryLight,
+                color: colors.primary,
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: 500,
+              }}>
+                {selected.size} seleccionada{selected.size !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
 
         {message && (
           <div
             style={{
               marginBottom: 16,
-              padding: 12,
-              borderRadius: 4,
-              background: message.type === 'ok' ? '#d4edda' : '#f8d7da',
-              color: message.type === 'ok' ? '#155724' : '#721c24',
-              whiteSpace: 'pre-wrap',
+              padding: '12px 16px',
+              borderRadius: radius.md,
+              background: message.type === 'ok' ? colors.successBg : colors.errorBg,
+              color: message.type === 'ok' ? '#0E7B00' : colors.error,
               fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
+            <span style={{ fontSize: 16 }}>{message.type === 'ok' ? '\u2713' : '\u2717'}</span>
             {message.text}
           </div>
         )}
 
         {!loading && images.length > 0 && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: colors.textSecondary, fontSize: 14, pointerEvents: 'none' }}>
+                {'\u2315'}
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o ID..."
+                style={{ ...inputStyle, boxSizing: 'border-box', paddingLeft: 32 }}
+              />
+            </div>
+
+            {filterOptions.families.length > 1 && (
+              <select value={filterFamily} onChange={(e) => setFilterFamily(e.target.value)} style={selectFilterStyle}>
+                <option value="">Familia: Todas</option>
+                {filterOptions.families.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            )}
+
+            {filterOptions.versions.length > 1 && (
+              <select value={filterVersion} onChange={(e) => setFilterVersion(e.target.value)} style={selectFilterStyle}>
+                <option value="">Version: Todas</option>
+                {filterOptions.versions.map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            )}
+
+            {filterOptions.archs.length > 1 && (
+              <select value={filterArch} onChange={(e) => setFilterArch(e.target.value)} style={selectFilterStyle}>
+                <option value="">Arq: Todas</option>
+                {filterOptions.archs.map((a) => (
+                  <option key={a} value={a}>{a}-bit</option>
+                ))}
+              </select>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                style={{
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  color: colors.textSecondary,
+                  border: 'none',
+                  borderRadius: radius.sm,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  textDecoration: 'underline',
+                }}
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        )}
+
+        {loading && <Spinner />}
+
+        {!loading && images.length === 0 && !message && (
+          <div style={{ textAlign: 'center', padding: 48, color: colors.textSecondary, fontSize: 14 }}>
+            No se encontraron imagenes privadas.
+          </div>
+        )}
+
+        {!loading && images.length > 0 && filteredImages.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 48, color: colors.textSecondary, fontSize: 14 }}>
+            No hay imagenes que coincidan con los filtros.
+          </div>
+        )}
+
+        {!loading && filteredImages.length > 0 && (
           <>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                background: '#fff',
-                borderRadius: 8,
-                overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-            >
-              <thead>
-                <tr style={{ background: '#1a1a2e', color: '#fff' }}>
-                  <th style={{ padding: 12, textAlign: 'left', width: 40 }}>
-                    <input
-                      type="checkbox"
-                      checked={selected.size === images.length}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th style={{ padding: 12, textAlign: 'left' }}>Nombre</th>
-                  <th style={{ padding: 12, textAlign: 'left' }}>ID</th>
-                  <th style={{ padding: 12, textAlign: 'left' }}>SO</th>
-                  <th style={{ padding: 12, textAlign: 'left' }}>Tamano</th>
-                  <th style={{ padding: 12, textAlign: 'left' }}>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {images.map((img) => (
-                  <tr
-                    key={img.id}
-                    style={{ borderBottom: '1px solid #eee' }}
-                  >
-                    <td style={{ padding: 10 }}>
+            <div style={{ background: colors.cardBg, borderRadius: radius.md, boxShadow: shadow.card, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#FAFBFC', borderBottom: `1px solid ${colors.border}` }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', width: 40 }}>
                       <input
                         type="checkbox"
-                        checked={selected.has(img.id)}
-                        onChange={() => toggleSelect(img.id)}
+                        checked={selected.size === filteredImages.length && filteredImages.length > 0}
+                        onChange={toggleAll}
+                        style={{ accentColor: colors.primary }}
                       />
-                    </td>
-                    <td style={{ padding: 10 }}>{img.name}</td>
-                    <td style={{ padding: 10, fontFamily: 'monospace', fontSize: 13 }}>
-                      {img.id}
-                    </td>
-                    <td style={{ padding: 10 }}>{img.osVersion || 'N/A'}</td>
-                    <td style={{ padding: 10 }}>{formatBytes(img.size)}</td>
-                    <td style={{ padding: 10 }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 4,
-                          background: img.status === 'active' ? '#d4edda' : '#f8d7da',
-                          color: img.status === 'active' ? '#155724' : '#721c24',
-                          fontSize: 12,
-                        }}
-                      >
-                        {img.status}
-                      </span>
-                    </td>
+                    </th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nombre</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>ID</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>SO</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tamano</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredImages.map((img) => (
+                    <tr
+                      key={img.id}
+                      onMouseEnter={() => setHoverRow(img.id)}
+                      onMouseLeave={() => setHoverRow(null)}
+                      style={{
+                        background: hoverRow === img.id ? colors.hoverRow : (selected.has(img.id) ? colors.primaryLight : colors.cardBg),
+                        borderBottom: `1px solid ${colors.borderLight}`,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <td style={{ padding: '10px 16px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(img.id)}
+                          onChange={() => toggleSelect(img.id)}
+                          style={{ accentColor: colors.primary }}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: 14, fontWeight: 500, color: colors.textPrimary }}>{img.name}</td>
+                      <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: 12, color: colors.textSecondary }}>
+                        {img.id.slice(0, 8)}...
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: 13, color: colors.textPrimary }}>{img.osVersion || 'N/A'}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 13, color: colors.textPrimary }}>{formatBytes(img.size)}</td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span
+                          style={{
+                            padding: '2px 10px',
+                            borderRadius: 20,
+                            background: img.status === 'active' ? colors.successBg : colors.errorBg,
+                            color: img.status === 'active' ? '#0E7B00' : colors.error,
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {img.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div
               style={{
-                marginTop: 24,
-                padding: 20,
-                background: '#fff',
-                borderRadius: 8,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                marginTop: 20,
+                padding: 24,
+                background: colors.cardBg,
+                borderRadius: radius.md,
+                boxShadow: shadow.card,
               }}
             >
-              <h3 style={{ marginTop: 0 }}>
-                Compartir {selected.size} imagen(es) seleccionada(s)
+              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 15, fontWeight: 600, color: colors.textPrimary }}>
+                Compartir imagenes
               </h3>
 
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: '0 0 200px' }}>
-                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
-                    Tipo de Destino
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
+                    Tipo de destino
                   </label>
                   <select
                     value={targetType}
                     onChange={(e) => setTargetType(e.target.value as TargetType)}
-                    style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                    style={{ ...inputStyle, boxSizing: 'border-box' }}
                   >
                     {TARGET_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -272,22 +504,16 @@ export default function DashboardPage() {
                   </select>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>
-                    Identificador de Destino
+                <div style={{ flex: 1, minWidth: 240 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
+                    Identificador de destino
                   </label>
                   <input
                     type="text"
                     value={targetValue}
                     onChange={(e) => setTargetValue(e.target.value)}
-                    placeholder={
-                      targetType === 'project'
-                        ? 'ej: 0a87231e6a00...'
-                        : targetType === 'domain'
-                        ? 'ej: 09f7bd8e6a00...'
-                        : 'ej: urn:enterprise:...'
-                    }
-                    style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                    placeholder={selectedPlaceholder}
+                    style={{ ...inputStyle, boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -295,14 +521,16 @@ export default function DashboardPage() {
                   onClick={handleShare}
                   disabled={sharing || selected.size === 0}
                   style={{
-                    padding: '8px 24px',
-                    background: sharing || selected.size === 0 ? '#ccc' : '#0f3460',
-                    color: '#fff',
+                    padding: '10px 28px',
+                    background: sharing || selected.size === 0 ? colors.disabledBg : colors.primary,
+                    color: sharing || selected.size === 0 ? colors.disabled : colors.textWhite,
                     border: 'none',
-                    borderRadius: 4,
+                    borderRadius: radius.sm,
                     cursor: sharing || selected.size === 0 ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 500,
+                    fontSize: 14,
                     whiteSpace: 'nowrap',
+                    transition: 'background 0.2s',
                   }}
                 >
                   {sharing ? 'Compartiendo...' : 'Compartir Imagenes'}

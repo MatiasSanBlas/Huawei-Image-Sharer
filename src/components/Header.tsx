@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import { colors, radius } from '@/lib/theme'
 
 export default function Header() {
   const router = useRouter()
@@ -18,22 +19,46 @@ export default function Header() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '12px 24px',
-        borderBottom: '1px solid #e0e0e0',
-        background: '#1a1a2e',
-        color: '#fff',
+        padding: '0 24px',
+        height: 56,
+        background: colors.headerBg,
+        borderBottom: `1px solid rgba(255,255,255,0.08)`,
       }}
     >
-      <h2 style={{ margin: 0 }}>Huawei OS Image Sharer</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            background: colors.primary,
+            borderRadius: radius.sm,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            color: colors.textWhite,
+            fontWeight: 700,
+          }}
+        >
+          H
+        </div>
+        <span style={{ fontSize: 15, fontWeight: 500, color: colors.textWhite, letterSpacing: -0.3 }}>
+          Image Sharer
+        </span>
+      </div>
+
       <button
         onClick={handleLogout}
         style={{
           padding: '6px 16px',
           cursor: 'pointer',
-          background: '#e94560',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 4,
+          background: 'transparent',
+          color: colors.textSecondary,
+          border: `1px solid ${colors.textSecondary}`,
+          borderRadius: radius.sm,
+          fontSize: 13,
+          fontWeight: 500,
+          transition: 'all 0.2s',
         }}
       >
         Cerrar Sesion

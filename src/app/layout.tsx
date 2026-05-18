@@ -12,7 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body style={{ fontFamily: 'system-ui, sans-serif', margin: 0 }}>
+      <body style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', margin: 0, background: '#F5F7FA', color: '#1D2129', WebkitFontSmoothing: 'antialiased' }}>
         {children}
       </body>
     </html>
