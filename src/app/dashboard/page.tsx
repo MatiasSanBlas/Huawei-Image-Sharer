@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase-client'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import AdminPanel from '@/components/AdminPanel'
 import { colors, radius, shadow, inputStyle } from '@/lib/theme'
 import { REGION_LABELS } from '@/lib/allowed-images'
 
@@ -75,6 +77,7 @@ function RegionBadge({ region }: { region: string }) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [images, setImages] = useState<Image[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [targetType, setTargetType] = useState<TargetType>('project')
@@ -83,6 +86,7 @@ export default function DashboardPage() {
   const [sharing, setSharing] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [hoverRow, setHoverRow] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string>('user')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRegion, setFilterRegion] = useState('')
@@ -94,6 +98,30 @@ export default function DashboardPage() {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token || ''
   }, [])
+
+  useEffect(() => {
+    async function checkApproval() {
+      const { data: session } = await supabase.auth.getSession()
+      if (!session.session) {
+        router.push('/auth/login')
+        return
+      }
+
+      const token = session.session.access_token
+      try {
+        const res = await fetch('/api/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.status === 'pending') { router.push('/pending'); return }
+          if (data.status === 'denied') { router.push('/denied'); return }
+          setUserRole(data.role || 'user')
+        }
+      } catch {}
+    }
+    checkApproval()
+  }, [router])
 
   useEffect(() => {
     async function fetchImages() {
@@ -554,6 +582,8 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+
+        {userRole === 'admin' && <AdminPanel />}
       </div>
     </div>
   )
