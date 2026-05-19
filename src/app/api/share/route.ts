@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth-guard'
-import { shareImages } from '@/lib/huawei-ims'
+import { shareImages, getProjectIdForRegion } from '@/lib/huawei-ims'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+
 export const dynamic = 'force-dynamic'
+
+interface ShareItem {
+  imageId: string
+  region: string
+}
+
 interface ShareRequest {
-  imageIds: string[]
+  items: ShareItem[]
   targetType: 'project' | 'domain' | 'ou_urn'
   targetValue: string
 }
@@ -23,11 +30,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
 
-    const { imageIds, targetType, targetValue } = body
+    const { items, targetType, targetValue } = body
 
-    if (!imageIds?.length || !targetType || !targetValue) {
+    if (!items?.length || !targetType || !targetValue) {
       return NextResponse.json(
-        { error: 'imageIds, targetType, and targetValue are required' },
+        { error: 'items, targetType, and targetValue are required' },
         { status: 400 }
       )
     }
@@ -40,40 +47,50 @@ export async function POST(request: Request) {
       )
     }
 
-    try {
-      const result = await shareImages(imageIds, targetType, targetValue)
-      const results = imageIds.map((id: string) => ({ imageId: id, success: true }))
-
-      for (const imageId of imageIds) {
-        await supabaseAdmin.from('share_logs').insert({
-          user_id: user.id,
-          image_id: imageId,
-          target_type: targetType,
-          target_value: targetValue,
-          status: 'success',
-        })
-      }
-
-      return NextResponse.json({ results, jobId: result.job_id })
-    } catch (err: any) {
-      const errMsg = err.message || 'Unknown error'
-
-      for (const imageId of imageIds) {
-        await supabaseAdmin.from('share_logs').insert({
-          user_id: user.id,
-          image_id: imageId,
-          target_type: targetType,
-          target_value: targetValue,
-          status: 'failed',
-          error_message: errMsg,
-        })
-      }
-
-      return NextResponse.json(
-        { results: imageIds.map((id: string) => ({ imageId: id, success: false, error: errMsg })) },
-        { status: 502 }
-      )
+    const byRegion: Record<string, string[]> = {}
+    for (const item of items) {
+      if (!byRegion[item.region]) byRegion[item.region] = []
+      byRegion[item.region].push(item.imageId)
     }
+
+    const results: { imageId: string; success: boolean; error?: string }[] = []
+
+    for (const [region, imageIds] of Object.entries(byRegion)) {
+      try {
+        const projectId = getProjectIdForRegion(region)
+        await shareImages(imageIds, targetType, targetValue, region, projectId)
+
+        for (const imageId of imageIds) {
+          results.push({ imageId, success: true })
+          await supabaseAdmin.from('share_logs').insert({
+            user_id: user.id,
+            image_id: imageId,
+            target_type: targetType,
+            target_value: targetValue,
+            status: 'success',
+          })
+        }
+      } catch (err: any) {
+        const errMsg = err.message || 'Unknown error'
+        for (const imageId of imageIds) {
+          results.push({ imageId, success: false, error: errMsg })
+          await supabaseAdmin.from('share_logs').insert({
+            user_id: user.id,
+            image_id: imageId,
+            target_type: targetType,
+            target_value: targetValue,
+            status: 'failed',
+            error_message: errMsg,
+          })
+        }
+      }
+    }
+
+    const allSuccess = results.every((r) => r.success)
+    return NextResponse.json(
+      { results },
+      { status: allSuccess ? 200 : 207 }
+    )
   } catch (err: any) {
     console.error('API /share error:', err)
     const detail: Record<string, any> = {

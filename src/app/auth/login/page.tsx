@@ -43,7 +43,7 @@ export default function LoginPage() {
           <div style={{ width: 48, height: 48, background: colors.primary, borderRadius: radius.md, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: colors.textWhite, fontWeight: 700 }}>
             H
           </div>
-          <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 600, color: colors.textPrimary }}>Iniciar Sesion</h1>
+          <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 600, color: colors.textPrimary }}>Iniciar Sesión</h1>
           <p style={{ margin: 0, fontSize: 14, color: colors.textSecondary }}>Huawei OS Image Sharer</p>
         </div>
 
@@ -63,7 +63,7 @@ export default function LoginPage() {
           </div>
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-              Contrasena
+              Contraseña
             </label>
             <input
               type="password"

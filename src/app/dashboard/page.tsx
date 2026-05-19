@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import Header from '@/components/Header'
 import { colors, radius, shadow, inputStyle } from '@/lib/theme'
+import { REGION_LABELS } from '@/lib/allowed-images'
 
 interface Image {
   id: string
@@ -15,6 +16,10 @@ interface Image {
   size: number
   status: string
   createdAt: string
+  region: string
+  edition: string | null
+  year: string | null
+  hasSQL: boolean
 }
 
 type TargetType = 'project' | 'domain' | 'ou_urn'
@@ -49,15 +54,24 @@ function Spinner() {
   )
 }
 
-function extractVersion(osVersion: string): string {
-  if (!osVersion) return ''
-  const winMatch = osVersion.match(/Windows Server (\d{4})\s*(Standard|Datacenter)?/i)
-  if (winMatch) {
-    return winMatch[2] ? `${winMatch[1]} ${winMatch[2]}` : winMatch[1]
-  }
-  const linuxMatch = osVersion.match(/(?:CentOS|Ubuntu|Debian|Red Hat|SUSE|EulerOS|OpenSUSE|Fedora|CoreOS)\s+([\d.]+)/i)
-  if (linuxMatch) return linuxMatch[1]
-  return osVersion.replace(/\s*64bit\s*/i, '').replace(/\s*32bit\s*/i, '').trim()
+function RegionBadge({ region }: { region: string }) {
+  const label = REGION_LABELS[region] || region
+  const isChile = region === 'la-south-2'
+  return (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: 20,
+        background: isChile ? '#E8F3FF' : '#FFF3E0',
+        color: isChile ? '#0052D9' : '#E65100',
+        fontSize: 11,
+        fontWeight: 500,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  )
 }
 
 export default function DashboardPage() {
@@ -71,9 +85,10 @@ export default function DashboardPage() {
   const [hoverRow, setHoverRow] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterFamily, setFilterFamily] = useState('')
-  const [filterVersion, setFilterVersion] = useState('')
-  const [filterArch, setFilterArch] = useState('')
+  const [filterRegion, setFilterRegion] = useState('')
+  const [filterEdition, setFilterEdition] = useState('')
+  const [filterYear, setFilterYear] = useState('')
+  const [filterSQL, setFilterSQL] = useState<boolean | null>(null)
 
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession()
@@ -113,80 +128,54 @@ export default function DashboardPage() {
     fetchImages()
   }, [getToken])
 
-  useEffect(() => { setFilterVersion('') }, [filterFamily])
-  useEffect(() => { setFilterArch('') }, [filterFamily, filterVersion])
+  useEffect(() => { setFilterEdition(''); setFilterYear(''); setFilterSQL(null) }, [filterRegion])
+  useEffect(() => { setFilterYear(''); setFilterSQL(null) }, [filterEdition])
+  useEffect(() => { setFilterSQL(null) }, [filterYear])
 
   const filterOptions = useMemo(() => {
-    const families = new Set<string>()
-    images.forEach((img) => {
-      if (img.osType) families.add(img.osType)
-      else if (img.osVersion?.toLowerCase().includes('windows')) families.add('Windows')
-      else if (img.osVersion) families.add('Linux')
-    })
+    const regions = new Set<string>()
+    images.forEach((img) => regions.add(img.region))
 
-    const familyMatched = images.filter((img) => {
-      if (!filterFamily) return true
-      if (img.osType && img.osType !== filterFamily) return false
-      if (!img.osType) {
-        const isWindows = img.osVersion?.toLowerCase().includes('windows')
-        if (filterFamily === 'Windows' && !isWindows) return false
-        if (filterFamily === 'Linux' && isWindows) return false
-      }
-      return true
-    })
+    const regionMatched = images.filter((img) => !filterRegion || img.region === filterRegion)
 
-    const versions = new Set<string>()
-    familyMatched.forEach((img) => {
-      const ver = extractVersion(img.osVersion)
-      if (ver) versions.add(ver)
-    })
+    const editions = new Set<string>()
+    regionMatched.forEach((img) => { if (img.edition) editions.add(img.edition) })
 
-    const versionMatched = familyMatched.filter((img) => {
-      if (!filterVersion) return true
-      return extractVersion(img.osVersion) === filterVersion
-    })
+    const editionMatched = regionMatched.filter((img) => !filterEdition || img.edition === filterEdition)
 
-    const archs = new Set<string>()
-    versionMatched.forEach((img) => {
-      if (img.osBit) archs.add(img.osBit)
-    })
+    const years = new Set<string>()
+    editionMatched.forEach((img) => { if (img.year) years.add(img.year) })
+
+    const yearMatched = editionMatched.filter((img) => !filterYear || img.year === filterYear)
+
+    const hasSQLImages = yearMatched.some((img) => img.hasSQL)
+    const hasNonSQLImages = yearMatched.some((img) => !img.hasSQL)
 
     return {
-      families: Array.from(families).sort(),
-      versions: Array.from(versions).sort(),
-      archs: Array.from(archs).sort(),
+      regions: Array.from(regions).sort(),
+      editions: Array.from(editions).sort(),
+      years: Array.from(years).sort((a, b) => b.localeCompare(a)),
+      showSQLToggle: hasSQLImages && hasNonSQLImages,
     }
-  }, [images, filterFamily, filterVersion])
+  }, [images, filterRegion, filterEdition, filterYear])
 
   const filteredImages = useMemo(() => {
     return images.filter((img) => {
+      if (filterRegion && img.region !== filterRegion) return false
+
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        const matchesSearch = img.name.toLowerCase().includes(q) || img.id.toLowerCase().includes(q)
-        if (!matchesSearch) return false
+        if (!img.name.toLowerCase().includes(q) && !img.id.toLowerCase().includes(q)) return false
       }
 
-      if (filterFamily) {
-        if (img.osType && img.osType !== filterFamily) return false
-        if (!img.osType) {
-          const isWindows = img.osVersion?.toLowerCase().includes('windows')
-          if (filterFamily === 'Windows' && !isWindows) return false
-          if (filterFamily === 'Linux' && isWindows) return false
-        }
-      }
-
-      if (filterVersion) {
-        const ver = extractVersion(img.osVersion)
-        if (ver !== filterVersion) return false
-      }
-
-      if (filterArch) {
-        if (img.osBit !== filterArch) return false
-      }
+      if (filterEdition && img.edition !== filterEdition) return false
+      if (filterYear && img.year !== filterYear) return false
+      if (filterSQL === true && !img.hasSQL) return false
+      if (filterSQL === false && img.hasSQL) return false
 
       return true
     })
-  }, [images, searchQuery, filterFamily, filterVersion, filterArch])
+  }, [images, searchQuery, filterRegion, filterEdition, filterYear, filterSQL])
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -219,6 +208,10 @@ export default function DashboardPage() {
     setMessage(null)
     const token = await getToken()
 
+    const items = filteredImages
+      .filter((img) => selected.has(img.id))
+      .map((img) => ({ imageId: img.id, region: img.region }))
+
     try {
       const res = await fetch('/api/share', {
         method: 'POST',
@@ -227,7 +220,7 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          imageIds: Array.from(selected),
+          items,
           targetType,
           targetValue: targetValue.trim(),
         }),
@@ -263,18 +256,19 @@ export default function DashboardPage() {
 
   function clearFilters() {
     setSearchQuery('')
-    setFilterFamily('')
-    setFilterVersion('')
-    setFilterArch('')
+    setFilterRegion('')
+    setFilterEdition('')
+    setFilterYear('')
+    setFilterSQL(null)
   }
 
-  const hasActiveFilters = searchQuery || filterFamily || filterVersion || filterArch
+  const hasActiveFilters = searchQuery || filterRegion || filterEdition || filterYear || filterSQL !== null
   const selectedPlaceholder = TARGET_OPTIONS.find((o) => o.value === targetType)?.placeholder || ''
 
   const selectFilterStyle: React.CSSProperties = {
     ...inputStyle,
     boxSizing: 'border-box',
-    minWidth: 140,
+    minWidth: 130,
     appearance: 'none' as any,
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2386909C' stroke-width='1.5'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
@@ -292,7 +286,7 @@ export default function DashboardPage() {
               Imagenes de SO
             </h1>
             <p style={{ margin: 0, fontSize: 13, color: colors.textSecondary }}>
-              Cuenta Origen · {filteredImages.length} de {images.length} imagen{images.length !== 1 ? 'es' : ''}
+              {filteredImages.length} de {images.length} imagen{images.length !== 1 ? 'es' : ''}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -345,31 +339,43 @@ export default function DashboardPage() {
               />
             </div>
 
-            {filterOptions.families.length > 1 && (
-              <select value={filterFamily} onChange={(e) => setFilterFamily(e.target.value)} style={selectFilterStyle}>
-                <option value="">Familia: Todas</option>
-                {filterOptions.families.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+            {filterOptions.regions.length > 1 && (
+              <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={selectFilterStyle}>
+                <option value="">Región: Todas</option>
+                {filterOptions.regions.map((r) => (
+                  <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
                 ))}
               </select>
             )}
 
-            {filterOptions.versions.length > 1 && (
-              <select value={filterVersion} onChange={(e) => setFilterVersion(e.target.value)} style={selectFilterStyle}>
-                <option value="">Version: Todas</option>
-                {filterOptions.versions.map((v) => (
-                  <option key={v} value={v}>{v}</option>
+            {filterOptions.editions.length > 1 && (
+              <select value={filterEdition} onChange={(e) => setFilterEdition(e.target.value)} style={selectFilterStyle}>
+                <option value="">Edición: Todas</option>
+                {filterOptions.editions.map((e) => (
+                  <option key={e} value={e}>{e}</option>
                 ))}
               </select>
             )}
 
-            {filterOptions.archs.length > 1 && (
-              <select value={filterArch} onChange={(e) => setFilterArch(e.target.value)} style={selectFilterStyle}>
-                <option value="">Arq: Todas</option>
-                {filterOptions.archs.map((a) => (
-                  <option key={a} value={a}>{a}-bit</option>
+            {filterOptions.years.length > 1 && (
+              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={selectFilterStyle}>
+                <option value="">Año: Todos</option>
+                {filterOptions.years.map((y) => (
+                  <option key={y} value={y}>{y}</option>
                 ))}
               </select>
+            )}
+
+            {filterOptions.showSQLToggle && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: colors.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 8px' }}>
+                <input
+                  type="checkbox"
+                  checked={filterSQL === true}
+                  onChange={() => setFilterSQL(filterSQL === true ? null : true)}
+                  style={{ accentColor: colors.primary }}
+                />
+                Con SQL
+              </label>
             )}
 
             {hasActiveFilters && (
@@ -420,10 +426,11 @@ export default function DashboardPage() {
                         style={{ accentColor: colors.primary }}
                       />
                     </th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Región</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nombre</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>ID</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>SO</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tamano</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tamaño</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Estado</th>
                   </tr>
                 </thead>
@@ -447,7 +454,15 @@ export default function DashboardPage() {
                           style={{ accentColor: colors.primary }}
                         />
                       </td>
-                      <td style={{ padding: '10px 16px', fontSize: 14, fontWeight: 500, color: colors.textPrimary }}>{img.name}</td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <RegionBadge region={img.region} />
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: 14, fontWeight: 500, color: colors.textPrimary }}>
+                        {img.name}
+                        {img.hasSQL && (
+                          <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 20, background: '#FFF3E0', color: '#E65100', fontSize: 10, fontWeight: 500 }}>SQL</span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: 12, color: colors.textSecondary }}>
                         {img.id.slice(0, 8)}...
                       </td>

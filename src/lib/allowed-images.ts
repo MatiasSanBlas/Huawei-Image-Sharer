@@ -1,0 +1,43 @@
+export const ALLOWED_IMAGES: Record<string, string[]> = {
+  'la-south-2': [
+    '8fd82e0f-49de-419e-b3d4-3c3982096c0d',
+    '3536eb7b-3a5a-46aa-9bb0-73749c63652e',
+    '79d944b8-87ab-4b04-b52b-0299a5a458cc',
+    '8bb2c314-889c-4022-bd92-8b0dd976a91c',
+    '373a5c44-0ff2-4485-9bdf-208f6f910303',
+    '0374bd2d-d024-4c4f-b871-b6b43a17302e',
+    '4d740f91-1602-4ebb-b7be-fef2d9543d06',
+    'ed683927-a08d-45e5-a858-a57d730a08e8',
+    '61993349-0cd8-4f59-8a9d-106f2f97ed71',
+    '4a8dd5f2-9f8f-46f1-a9fb-8cbf4871ec8f',
+    'd91ef884-cc7a-4cc3-87e7-2d8a2df1b29f',
+    '0667c1b4-ddd0-4d2d-9431-6a94f2af05c8',
+    '2f232162-2263-425d-ad18-e27aba71c223',
+    'e7037c26-5d42-43fc-bf41-9d67e48d6d8e',
+    '0c506b78-22b3-419d-85b9-d4a4c7e19847',
+    '71f71172-682b-4e2b-8495-349be98a18ab',
+  ],
+  'sa-argentina-1': [
+    '095e9142-8a8d-445b-95dd-2114cac65266',
+    'aed9a6c3-b241-49b5-a372-b1aa84b72782',
+    'b9e954d5-9564-48b3-a9a2-d210f506fcb0',
+    '097a218e-df7b-49db-960e-ccde4096fdd7',
+    'f983f98f-39c6-4094-95c9-6d925084243d',
+    '348beced-2f2b-4fe5-83b5-4d27039d467b',
+    '895b22fa-c6ff-4449-a495-ed6318e4d41c',
+    'de74e8c1-43e7-453c-8d50-d8e4ab41f32e',
+    '93d89a1f-06ac-43d2-8fb6-4dd22b4b9b68',
+    'd9ba4dff-9d91-4fde-bd42-879297f7e43f',
+    '7a9ab170-77a6-4f41-803d-87ac57de6dd3',
+    '242b50c1-65c9-46ed-bed3-c3f21374b39c',
+    '8bfc4248-ed5c-4d93-ab85-295a105ab70d',
+    '5581c013-07ad-41d7-839b-6f012d026d40',
+    'f9a4e191-bb9e-479d-90c1-afd04e5ef80f',
+    '4405ed9a-318b-4e18-90df-5511250dc9e2',
+  ],
+}
+
+export const REGION_LABELS: Record<string, string> = {
+  'la-south-2': 'Chile',
+  'sa-argentina-1': 'Argentina',
+}

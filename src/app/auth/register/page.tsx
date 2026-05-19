@@ -65,7 +65,7 @@ export default function RegisterPage() {
           </div>
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-              Contrasena
+              Contraseña
             </label>
             <input
               type="password"
@@ -73,7 +73,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              placeholder="Minimo 6 caracteres"
+              placeholder="Mínimo 6 caracteres"
               style={{ ...inputStyle, boxSizing: 'border-box' }}
             />
           </div>
@@ -99,7 +99,7 @@ export default function RegisterPage() {
 
         <p style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: colors.textSecondary }}>
           Ya tienes cuenta?{' '}
-          <a href="/auth/login" style={{ color: colors.primary, textDecoration: 'none', fontWeight: 500 }}>Inicia Sesion</a>
+          <a href="/auth/login" style={{ color: colors.primary, textDecoration: 'none', fontWeight: 500 }}>Inicia Sesión</a>
         </p>
       </div>
     </div>

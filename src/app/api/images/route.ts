@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth-guard'
 import { listPrivateImages } from '@/lib/huawei-ims'
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
@@ -12,17 +13,34 @@ export async function GET(request: Request) {
 
     const rawImages = await listPrivateImages()
 
-    const images = rawImages.map((img: any) => ({
-      id: img.id,
-      name: img.name,
-      osVersion: img.__os_version || img.os_version,
-      osType: img.__os_type || img.os_type,
-      osBit: img.__os_bit || img.os_bit,
-      platform: img.__platform || img.platform,
-      size: img.__image_size || img.size,
-      status: img.status,
-      createdAt: img.created_at || img.createdAt,
-    }))
+    const images = rawImages.map((img: any) => {
+      const name = img.name || ''
+      const osVersion = img.__os_version || img.os_version || ''
+
+      const editionMatch = name.match(/(Standard|Datacenter|Core|Essentials|Web)/i)
+      const edition = editionMatch ? editionMatch[1] : null
+
+      const yearMatch = (name + ' ' + osVersion).match(/\b(20\d{2})\b/)
+      const year = yearMatch ? yearMatch[1] : null
+
+      const hasSQL = name.toLowerCase().includes('sql') || osVersion.toLowerCase().includes('sql')
+
+      return {
+        id: img.id,
+        name,
+        osVersion,
+        osType: img.__os_type || img.os_type,
+        osBit: img.__os_bit || img.os_bit,
+        platform: img.__platform || img.platform,
+        size: img.__image_size || img.size,
+        status: img.status,
+        createdAt: img.created_at || img.createdAt,
+        region: img.region,
+        edition,
+        year,
+        hasSQL,
+      }
+    })
 
     return NextResponse.json({ images })
   } catch (err: any) {
