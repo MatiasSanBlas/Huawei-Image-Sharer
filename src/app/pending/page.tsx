@@ -1,33 +1,71 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import { colors, radius, shadow } from '@/lib/theme'
 
 export default function PendingPage() {
   const router = useRouter()
+  const redirected = useRef(false)
+
+  async function checkProfile() {
+    if (redirected.current) return
+    const { data: session } = await supabase.auth.getSession()
+    if (!session.session) return
+
+    const token = session.session.access_token
+    try {
+      const res = await fetch('/api/auth/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.status === 'approved') { redirected.current = true; router.push('/dashboard'); return }
+        if (data.status === 'denied') { redirected.current = true; router.push('/denied'); return }
+      }
+    } catch {}
+  }
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session.session) return
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let interval: ReturnType<typeof setInterval> | null = null
 
-      const token = session.session.access_token
-      try {
-        const res = await fetch('/api/auth/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data.status === 'approved') router.push('/dashboard')
-          if (data.status === 'denied') router.push('/denied')
-        }
-      } catch {}
-    }, 5000)
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) return
 
-    return () => clearInterval(interval)
+      checkProfile()
+
+      channel = supabase
+        .channel('own-profile-pending')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_profiles',
+            filter: `id=eq.${session.user.id}`,
+          },
+          (payload) => {
+            if (redirected.current) return
+            const newStatus = payload.new?.status
+            if (newStatus === 'approved') { redirected.current = true; router.push('/dashboard') }
+            if (newStatus === 'denied') { redirected.current = true; router.push('/denied') }
+          }
+        )
+        .subscribe()
+
+      interval = setInterval(checkProfile, 3000)
+
+      authListener.subscription.unsubscribe()
+    })
+
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+      if (interval) clearInterval(interval)
+      authListener.subscription.unsubscribe()
+    }
   }, [router])
 
   async function handleLogout() {

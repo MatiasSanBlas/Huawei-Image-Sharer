@@ -30,7 +30,7 @@ export default function RegisterPage() {
 
     if (data.session) {
       document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${data.session.expires_in}; samesite=lax`
-      router.push('/dashboard')
+      router.push('/pending')
     } else {
       setError('Revisa tu email para confirmar tu cuenta.')
     }

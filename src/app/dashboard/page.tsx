@@ -76,6 +76,24 @@ function RegionBadge({ region }: { region: string }) {
   )
 }
 
+function FullPageSpinner() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBg }}>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          border: `3px solid ${colors.border}`,
+          borderTopColor: colors.primary,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [images, setImages] = useState<Image[]>([])
@@ -87,6 +105,8 @@ export default function DashboardPage() {
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [hoverRow, setHoverRow] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string>('user')
+  const [approvalChecked, setApprovalChecked] = useState(false)
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRegion, setFilterRegion] = useState('')
@@ -114,16 +134,30 @@ export default function DashboardPage() {
         })
         if (res.ok) {
           const data = await res.json()
-          if (data.status === 'pending') { router.push('/pending'); return }
-          if (data.status === 'denied') { router.push('/denied'); return }
+          if (data.status === 'pending') {
+            setApprovalChecked(true)
+            setApprovalStatus('pending')
+            router.push('/pending')
+            return
+          }
+          if (data.status === 'denied') {
+            setApprovalChecked(true)
+            setApprovalStatus('denied')
+            router.push('/denied')
+            return
+          }
           setUserRole(data.role || 'user')
+          setApprovalStatus('approved')
         }
       } catch {}
+      setApprovalChecked(true)
     }
     checkApproval()
   }, [router])
 
   useEffect(() => {
+    if (!approvalChecked || approvalStatus !== 'approved') return
+
     async function fetchImages() {
       const token = await getToken()
       if (!token) {
@@ -154,7 +188,7 @@ export default function DashboardPage() {
       }
     }
     fetchImages()
-  }, [getToken])
+  }, [approvalChecked, approvalStatus, getToken])
 
   useEffect(() => { setFilterEdition(''); setFilterYear(''); setFilterSQL(null) }, [filterRegion])
   useEffect(() => { setFilterYear(''); setFilterSQL(null) }, [filterEdition])
@@ -302,6 +336,10 @@ export default function DashboardPage() {
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 10px center',
     paddingRight: 28,
+  }
+
+  if (!approvalChecked) {
+    return <FullPageSpinner />
   }
 
   return (

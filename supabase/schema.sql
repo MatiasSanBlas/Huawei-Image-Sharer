@@ -94,3 +94,11 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ============================================
+-- Realtime: enable Postgres Changes on user_profiles
+-- ============================================
+
+alter publication supabase_realtime add table public.user_profiles;
+
+alter table public.user_profiles replica identity full;

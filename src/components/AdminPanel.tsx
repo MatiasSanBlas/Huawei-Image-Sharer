@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { colors, radius, shadow } from '@/lib/theme'
 
@@ -18,12 +18,12 @@ export default function AdminPanel() {
   const [acting, setActing] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
-  async function getToken() {
+  const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token || ''
-  }
+  }, [])
 
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     const token = await getToken()
     try {
       const res = await fetch('/api/admin/users', {
@@ -38,13 +38,41 @@ export default function AdminPanel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [getToken])
 
   useEffect(() => {
     fetchUsers()
-    const interval = setInterval(fetchUsers, 10000)
-    return () => clearInterval(interval)
-  }, [])
+
+    const channel = supabase
+      .channel('admin-users-realtime')
+      .on<UserProfile>(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'user_profiles' },
+        (payload) => {
+          setUsers((prev) => {
+            if (prev.some((u) => u.id === payload.new.id)) return prev
+            return [payload.new, ...prev]
+          })
+        }
+      )
+      .on<UserProfile>(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'user_profiles' },
+        (payload) => {
+          setUsers((prev) =>
+            prev.map((u) => (u.id === payload.new.id ? { ...u, ...payload.new } : u))
+          )
+        }
+      )
+      .subscribe()
+
+    const interval = setInterval(fetchUsers, 30000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
+  }, [fetchUsers])
 
   async function handleAction(userId: string, action: 'approve' | 'deny') {
     setActing(userId)

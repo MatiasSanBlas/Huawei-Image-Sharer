@@ -30,6 +30,18 @@ export default function LoginPage() {
 
     if (data.session) {
       document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${data.session.expires_in}; samesite=lax`
+
+      try {
+        const res = await fetch('/api/auth/profile', {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        })
+        if (res.ok) {
+          const profile = await res.json()
+          if (profile.status === 'pending') { router.push('/pending'); setLoading(false); return }
+          if (profile.status === 'denied') { router.push('/denied'); setLoading(false); return }
+        }
+      } catch {}
+
       router.push('/dashboard')
     }
 
