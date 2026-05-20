@@ -4,11 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
+const noStore = { headers: { 'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate' } }
+
 export async function GET(request: Request) {
   try {
     const { user, error: authError } = await getAuthenticatedUser(request)
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, ...noStore })
     }
 
     const { data: profile, error: profileErr } = await supabaseAdmin
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
           status: profile?.status || null,
           role: profile?.role || null,
         },
-      }, { status: 403 })
+      }, { status: 403, ...noStore })
     }
 
     const { data, error: dbError } = await supabaseAdmin
@@ -35,15 +37,12 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
 
     if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 500 })
+      return NextResponse.json({ error: dbError.message }, { status: 500, ...noStore })
     }
 
-    return NextResponse.json(
-      { users: data || [] },
-      { headers: { 'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate' } }
-    )
+    return NextResponse.json({ users: data || [] }, noStore)
   } catch (err: any) {
     console.error('API /admin/users error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: err.message }, { status: 500, ...noStore })
   }
 }
