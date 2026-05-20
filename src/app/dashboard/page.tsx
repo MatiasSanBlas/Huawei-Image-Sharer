@@ -131,6 +131,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch('/api/auth/profile', {
           headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
         })
         if (res.ok) {
           const data = await res.json()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import { colors, radius, shadow } from '@/lib/theme'
@@ -8,6 +8,7 @@ import { colors, radius, shadow } from '@/lib/theme'
 export default function PendingPage() {
   const router = useRouter()
   const redirected = useRef(false)
+  const [checking, setChecking] = useState(false)
 
   async function checkProfile() {
     if (redirected.current) return
@@ -26,6 +27,12 @@ export default function PendingPage() {
         if (data.status === 'denied') { redirected.current = true; router.push('/denied'); return }
       }
     } catch {}
+  }
+
+  async function handleManualCheck() {
+    setChecking(true)
+    await checkProfile()
+    setChecking(false)
   }
 
   useEffect(() => {
@@ -54,7 +61,13 @@ export default function PendingPage() {
             if (newStatus === 'denied') { redirected.current = true; router.push('/denied') }
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[pending] Realtime subscribed')
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[pending] Realtime issue:', status, '- falling back to polling')
+          }
+        })
 
       interval = setInterval(checkProfile, 3000)
 
@@ -78,7 +91,7 @@ export default function PendingPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBg }}>
       <div style={{ width: 400, padding: '40px 32px', background: colors.cardBg, borderRadius: radius.lg, boxShadow: shadow.card, textAlign: 'center' }}>
         <div style={{ width: 48, height: 48, background: '#FFF3E0', borderRadius: radius.md, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#E65100' }}>
-          {'\u23F3'}
+          {'⏳'}
         </div>
         <h1 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 600, color: colors.textPrimary }}>
           Cuenta Pendiente de Aprobacion
@@ -89,12 +102,21 @@ export default function PendingPage() {
         <p style={{ margin: '0 0 24px', fontSize: 12, color: colors.textSecondary }}>
           Esta pagina se actualizara automaticamente cuando tu cuenta sea aprobada.
         </p>
-        <button
-          onClick={handleLogout}
-          style={{ padding: '10px 24px', background: 'transparent', color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: radius.sm, cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
-        >
-          Cerrar Sesion
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+          <button
+            onClick={handleManualCheck}
+            disabled={checking}
+            style={{ padding: '10px 24px', background: checking ? colors.disabledBg : colors.primary, color: checking ? colors.disabled : colors.textWhite, border: 'none', borderRadius: radius.sm, cursor: checking ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 500, width: '100%' }}
+          >
+            {checking ? 'Verificando...' : 'Verificar Estado'}
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{ padding: '10px 24px', background: 'transparent', color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: radius.sm, cursor: 'pointer', fontSize: 14, fontWeight: 500, width: '100%' }}
+          >
+            Cerrar Sesion
+          </button>
+        </div>
       </div>
     </div>
   )
