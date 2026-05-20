@@ -30,9 +30,13 @@ export default function AdminPanel() {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       })
-      if (!res.ok) throw new Error('Failed to load users')
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || `Error ${res.status}`)
+      }
       const data = await res.json()
       setUsers(data.users || [])
+      setMessage(null)
     } catch (err: any) {
       setMessage({ type: 'err', text: err.message })
     } finally {
@@ -43,33 +47,9 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchUsers()
 
-    const channel = supabase
-      .channel('admin-users-realtime')
-      .on<UserProfile>(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'user_profiles' },
-        (payload) => {
-          setUsers((prev) => {
-            if (prev.some((u) => u.id === payload.new.id)) return prev
-            return [payload.new, ...prev]
-          })
-        }
-      )
-      .on<UserProfile>(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'user_profiles' },
-        (payload) => {
-          setUsers((prev) =>
-            prev.map((u) => (u.id === payload.new.id ? { ...u, ...payload.new } : u))
-          )
-        }
-      )
-      .subscribe()
-
-    const interval = setInterval(fetchUsers, 30000)
+    const interval = setInterval(fetchUsers, 10000)
 
     return () => {
-      supabase.removeChannel(channel)
       clearInterval(interval)
     }
   }, [fetchUsers])
@@ -94,9 +74,7 @@ export default function AdminPanel() {
         text: `Usuario ${action === 'approve' ? 'aprobado' : 'denegado'} exitosamente`,
       })
 
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, status: action === 'approve' ? 'approved' : 'denied' } : u))
-      )
+      fetchUsers()
     } catch (err: any) {
       setMessage({ type: 'err', text: err.message })
     } finally {
@@ -123,6 +101,15 @@ export default function AdminPanel() {
       )}
 
       {loading && <p style={{ fontSize: 13, color: colors.textSecondary }}>Cargando...</p>}
+
+      {!loading && message?.type === 'err' && (
+        <button
+          onClick={() => { setLoading(true); fetchUsers() }}
+          style={{ marginTop: 8, padding: '6px 16px', background: colors.primary, color: colors.textWhite, border: 'none', borderRadius: radius.sm, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+        >
+          Reintentar
+        </button>
+      )}
 
       {!loading && pending.length === 0 && (
         <p style={{ fontSize: 13, color: colors.textSecondary }}>No hay usuarios pendientes.</p>

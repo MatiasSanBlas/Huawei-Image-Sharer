@@ -38,7 +38,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: dbError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ users: data || [] })
+    return NextResponse.json(
+      { users: data || [] },
+      { headers: { 'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate' } }
+    )
   } catch (err: any) {
     console.error('API /admin/users error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

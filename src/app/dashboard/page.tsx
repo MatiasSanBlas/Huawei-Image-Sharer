@@ -149,7 +149,9 @@ export default function DashboardPage() {
           setUserRole(data.role || 'user')
           setApprovalStatus('approved')
         }
-      } catch {}
+      } catch (err: any) {
+        console.error('Error checking approval:', err.message)
+      }
       setApprovalChecked(true)
     }
     checkApproval()
