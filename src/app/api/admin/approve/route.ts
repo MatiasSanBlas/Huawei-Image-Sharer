@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 const noStore = { headers: { 'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate' } }
 
