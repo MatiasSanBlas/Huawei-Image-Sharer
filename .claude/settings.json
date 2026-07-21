@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vitest *)",
+      "Bash(bash tests/smoke.sh http://localhost:3000)",
+      "Bash(git status *)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(npx vercel *)",
+      "Bash(BASE_URL=\"https://huawei-image-sharer-7f6li9c4b-msanblas.vercel.app\" npx vitest run tests/profile-cache.test.ts)"
+    ]
+  }
+}

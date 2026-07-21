@@ -1,0 +1,30 @@
+# Keep-alive diario para que Supabase no pause el proyecto por inactividad.
+# Corre una vez al día en la nube de GitHub (no depende de tu PC estar encendida).
+#
+# Requiere 2 secrets en el repo (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL                -> https://olvhpklcwxobjovuphus.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY   -> sb_secret_...   (la service role key, NO la anon)
+
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # 06:17 UTC todos los días (minuto off-peak para no chocar con el :00 global)
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run keep-alive
+        run: node scripts/keepalive.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

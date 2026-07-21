@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:cache": "vitest run tests/profile-cache.test.ts",
     "test:flow": "vitest run tests/approval-flow.test.ts",
-    "smoke": "bash tests/smoke.sh"
+    "smoke": "bash tests/smoke.sh",
+    "keepalive": "node scripts/keepalive.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
