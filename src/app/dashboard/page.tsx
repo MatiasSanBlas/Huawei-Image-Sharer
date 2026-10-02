@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import AdminPanel from '@/components/AdminPanel'
+import SelectMenu from '@/components/SelectMenu'
 import { colors, radius, shadow, inputStyle } from '@/lib/theme'
 import { REGION_LABELS } from '@/lib/allowed-images'
 import { readShareStream, type ShareResult, type ShareStreamEvent } from '@/lib/share-stream'
@@ -396,18 +397,6 @@ export default function DashboardPage() {
     : shareProgress?.failed ? 'Envío completado con errores' : 'Imágenes compartidas'
   const selectedPlaceholder = TARGET_OPTIONS.find((o) => o.value === targetType)?.placeholder || ''
 
-  const selectFilterStyle: React.CSSProperties = {
-    ...inputStyle,
-    boxSizing: 'border-box',
-    width: 'auto',
-    minWidth: 130,
-    appearance: 'none' as any,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23626B78' stroke-width='1.5'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 10px center',
-    paddingRight: 28,
-  }
-
   if (!approvalChecked) {
     return <FullPageSpinner />
   }
@@ -441,30 +430,33 @@ export default function DashboardPage() {
             </div>
 
             {filterOptions.regions.length > 1 && (
-              <select aria-label="Filtrar por región" value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={selectFilterStyle}>
-                <option value="">Región: Todas</option>
-                {filterOptions.regions.map((r) => (
-                  <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
-                ))}
-              </select>
+              <SelectMenu
+                label="Filtrar por región"
+                menuLabel="REGIÓN"
+                value={filterRegion}
+                onChange={setFilterRegion}
+                options={[{ value: '', label: 'Región: Todas' }, ...filterOptions.regions.map((r) => ({ value: r, label: REGION_LABELS[r] || r }))]}
+              />
             )}
 
             {filterOptions.editions.length > 1 && (
-              <select aria-label="Filtrar por edición" value={filterEdition} onChange={(e) => setFilterEdition(e.target.value)} style={selectFilterStyle}>
-                <option value="">Edición: Todas</option>
-                {filterOptions.editions.map((e) => (
-                  <option key={e} value={e}>{e}</option>
-                ))}
-              </select>
+              <SelectMenu
+                label="Filtrar por edición"
+                menuLabel="EDICIÓN"
+                value={filterEdition}
+                onChange={setFilterEdition}
+                options={[{ value: '', label: 'Edición: Todas' }, ...filterOptions.editions.map((e) => ({ value: e, label: e }))]}
+              />
             )}
 
             {filterOptions.years.length > 1 && (
-              <select aria-label="Filtrar por año" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={selectFilterStyle}>
-                <option value="">Año: Todos</option>
-                {filterOptions.years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+              <SelectMenu
+                label="Filtrar por año"
+                menuLabel="AÑO"
+                value={filterYear}
+                onChange={setFilterYear}
+                options={[{ value: '', label: 'Año: Todos' }, ...filterOptions.years.map((y) => ({ value: y, label: y }))]}
+              />
             )}
 
             {filterOptions.showSQLToggle && (
@@ -591,18 +583,16 @@ export default function DashboardPage() {
               <div className="share-fields">
                 <div className="field target-type">
                   <label htmlFor="target-type">Tipo de destino</label>
-                  <select
+                  <SelectMenu
                     id="target-type"
+                    label="Tipo de destino"
+                    menuLabel="TIPO DE DESTINO"
                     value={targetType}
-                    onChange={(e) => setTargetType(e.target.value as TargetType)}
+                    onChange={(value) => setTargetType(value as TargetType)}
                     disabled={sharing}
-                  >
-                    {TARGET_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    variant="field"
+                    options={TARGET_OPTIONS}
+                  />
                 </div>
 
                 <div className="field">

@@ -191,6 +191,57 @@ button:disabled { cursor: not-allowed; }
 .search-field input { padding-left: 37px !important; }
 .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #89929f; pointer-events: none; }
 .filter-panel select { flex: 0 1 auto; }
+.select-menu { position: relative; flex: 0 1 auto; min-width: 136px; }
+.select-menu--field { width: 100%; min-width: 0; }
+.select-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px 9px 14px;
+  border: 1px solid #dce1e8;
+  border-radius: 9px;
+  background: #fff;
+  color: #424a56;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, box-shadow .18s;
+}
+.select-menu--field .select-menu-trigger { min-height: 48px; font-size: 14px; font-weight: 500; }
+.select-menu-trigger:hover:not(:disabled) { border-color: #b8bec9; background: #fcfcfd; filter: none; }
+.select-menu--active .select-menu-trigger { border-color: #e5b9bf; background: #fff9fa; color: var(--huawei-red-dark); }
+.select-menu--open .select-menu-trigger, .select-menu-trigger:focus-visible { outline: none; border-color: var(--huawei-red); box-shadow: 0 0 0 4px rgba(199, 0, 11, .09); }
+.select-menu-trigger:disabled { background: #f5f6f8; color: #8a929c; cursor: not-allowed; }
+.select-menu-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-menu-chevron { flex: 0 0 auto; color: #818a96; transition: transform .18s, color .18s; }
+.select-menu--open .select-menu-chevron { transform: rotate(180deg); color: var(--huawei-red); }
+.select-menu-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: max(100%, 210px);
+  padding: 6px;
+  border: 1px solid #e3e6ec;
+  border-top: 3px solid var(--huawei-red);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(28, 34, 45, .16), 0 2px 8px rgba(28, 34, 45, .06);
+  animation: select-menu-enter .14s ease-out;
+}
+.select-menu--up .select-menu-popover { top: auto; bottom: calc(100% + 6px); }
+.select-menu-heading { padding: 9px 11px 7px; color: #89919c; font-size: 10px; font-weight: 750; letter-spacing: .1em; }
+.select-menu-list { max-height: 248px; margin: 0; padding: 0; overflow-y: auto; list-style: none; overscroll-behavior: contain; }
+.select-menu-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 36px; padding: 8px 11px; border-radius: 6px; color: #3c4450; font-size: 13px; line-height: 1.35; cursor: pointer; }
+.select-menu-option:hover, .select-menu-option:focus-visible { outline: none; background: #f6f7f9; }
+.select-menu-option[aria-selected="true"] { background: #fff0f2; color: var(--huawei-red-dark); font-weight: 700; }
+.select-menu-option[aria-selected="true"]:hover, .select-menu-option[aria-selected="true"]:focus-visible { background: #ffe7e9; }
+.select-menu-check { color: var(--huawei-red); font-size: 15px; line-height: 1; }
+@keyframes select-menu-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .clear-filters { padding: 9px 10px; border: 0; background: transparent; color: var(--huawei-red); font-size: 13px; font-weight: 650; cursor: pointer; }
 .clear-filters:hover { text-decoration: underline; }
 .data-panel { overflow-x: auto; }
@@ -252,7 +303,8 @@ button:disabled { cursor: not-allowed; }
   .selection-dock-count { flex: 1 1 auto; }
   .selection-dock-actions { flex: 1 1 auto; }
   .filter-panel { padding: 12px; }
-  .filter-panel select { flex: 1 1 140px; }
+  .filter-panel .select-menu { flex: 1 1 140px; min-width: 0; }
+  .filter-panel .select-menu-popover { width: 100%; min-width: 100%; }
   .share-panel, .admin-panel { padding: 18px; }
   .share-fields .target-type, .share-fields button { flex: 1 1 100%; }
 }
