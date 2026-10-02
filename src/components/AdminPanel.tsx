@@ -86,16 +86,16 @@ export default function AdminPanel() {
   const others = users.filter((u) => u.status !== 'pending')
 
   return (
-    <div style={{ marginTop: 32, padding: 24, background: colors.cardBg, borderRadius: radius.md, boxShadow: shadow.card }}>
+    <section className="admin-panel" aria-labelledby="admin-title">
       <h2 style={{ marginTop: 0, marginBottom: 8, fontSize: 17, fontWeight: 600, color: colors.textPrimary }}>
-        Panel de Administracion
+        <span id="admin-title">Administración de usuarios</span>
       </h2>
       <p style={{ margin: '0 0 16px', fontSize: 13, color: colors.textSecondary }}>
         {pending.length} usuario{pending.length !== 1 ? 's' : ''} pendiente{pending.length !== 1 ? 's' : ''} de aprobacion
       </p>
 
       {message && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: radius.sm, background: message.type === 'ok' ? colors.successBg : colors.errorBg, color: message.type === 'ok' ? '#0E7B00' : colors.error, fontSize: 13 }}>
+        <div role="status" aria-live="polite" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: radius.sm, background: message.type === 'ok' ? colors.successBg : colors.errorBg, color: message.type === 'ok' ? '#0E7B00' : colors.error, fontSize: 13 }}>
           {message.text}
         </div>
       )}
@@ -118,7 +118,7 @@ export default function AdminPanel() {
       {!loading && pending.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 8 }}>Pendientes</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="admin-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#FAFBFC', borderBottom: `1px solid ${colors.border}` }}>
                 <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary }}>Email</th>
@@ -150,14 +150,14 @@ export default function AdminPanel() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
       {!loading && others.length > 0 && (
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 8 }}>Todos los usuarios</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="admin-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#FAFBFC', borderBottom: `1px solid ${colors.border}` }}>
                 <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: colors.textSecondary }}>Email</th>
@@ -182,9 +182,9 @@ export default function AdminPanel() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

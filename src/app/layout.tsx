@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Huawei OS Image Sharer',
@@ -12,7 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', margin: 0, background: '#F5F7FA', color: '#1D2129', WebkitFontSmoothing: 'antialiased' }}>
+      <body style={{ fontFamily: '"Segoe UI", Arial, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
+        <a className="skip-link" href="#main-content">Ir al contenido</a>
         {children}
       </body>
     </html>

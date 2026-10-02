@@ -1,15 +1,15 @@
 export const colors = {
-  primary: '#E20011',
-  primaryDark: '#B8000E',
-  primaryLight: '#FFF0F0',
-  headerBg: '#000000',
-  pageBg: '#F5F7FA',
+  primary: '#C70016',
+  primaryDark: '#A90012',
+  primaryLight: '#FFF0F2',
+  headerBg: '#FFFFFF',
+  pageBg: '#F7F8FA',
   cardBg: '#FFFFFF',
-  textPrimary: '#1D2129',
-  textSecondary: '#86909C',
+  textPrimary: '#24262B',
+  textSecondary: '#626B78',
   textWhite: '#FFFFFF',
-  border: '#E5E6EB',
-  borderLight: '#F2F3F5',
+  border: '#E5E8EE',
+  borderLight: '#EFF1F4',
   success: '#34C724',
   successBg: '#E8FFEA',
   error: '#F53F3F',
@@ -17,41 +17,41 @@ export const colors = {
   warning: '#FF9A2E',
   disabled: '#C9CDD4',
   disabledBg: '#F2F3F5',
-  hoverRow: '#F7F8FA',
+  hoverRow: '#FBF5F6',
 }
 
 export const radius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
+  sm: 8,
+  md: 10,
+  lg: 14,
 }
 
 export const shadow = {
-  card: '0 2px 8px rgba(0,0,0,0.06)',
-  cardHover: '0 4px 16px rgba(0,0,0,0.1)',
-  dropdown: '0 4px 12px rgba(0,0,0,0.12)',
+  card: '0 4px 18px rgba(35,43,56,0.035)',
+  cardHover: '0 8px 24px rgba(35,43,56,0.08)',
+  dropdown: '0 8px 24px rgba(35,43,56,0.12)',
 }
 
 export const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 12px',
+  padding: '11px 14px',
   borderRadius: radius.sm,
   border: `1px solid ${colors.border}`,
   fontSize: 14,
   color: colors.textPrimary,
-  outline: 'none',
-  transition: 'border-color 0.2s',
+  background: colors.cardBg,
+  transition: 'border-color 0.2s, box-shadow 0.2s',
 }
 
 export const primaryBtn: React.CSSProperties = {
   width: '100%',
-  padding: '10px 24px',
+  padding: '11px 24px',
   background: colors.primary,
   color: colors.textWhite,
   border: 'none',
   borderRadius: radius.sm,
   cursor: 'pointer',
-  fontWeight: 500,
+  fontWeight: 700,
   fontSize: 14,
   transition: 'background 0.2s',
 }

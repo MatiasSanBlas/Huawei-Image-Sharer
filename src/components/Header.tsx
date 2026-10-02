@@ -2,7 +2,6 @@
 
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { colors, radius } from '@/lib/theme'
 
 export default function Header() {
   const router = useRouter()
@@ -14,54 +13,20 @@ export default function Header() {
   }
 
   return (
-    <header
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 24px',
-        height: 56,
-        background: colors.headerBg,
-        borderBottom: `1px solid rgba(255,255,255,0.08)`,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            background: colors.primary,
-            borderRadius: radius.sm,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 14,
-            color: colors.textWhite,
-            fontWeight: 700,
-          }}
-        >
-          H
+    <header className="site-header">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+        <div className="brand" aria-label="Huawei Cloud">
+          <span className="brand-mark" aria-hidden="true">H</span>
+          <span className="brand-name">HUAWEI <span>CLOUD</span></span>
         </div>
-        <span style={{ fontSize: 15, fontWeight: 500, color: colors.textWhite, letterSpacing: -0.3 }}>
-          Image Sharer
-        </span>
+        <span className="header-product">Image Sharer</span>
       </div>
 
       <button
         onClick={handleLogout}
-        style={{
-          padding: '6px 16px',
-          cursor: 'pointer',
-          background: 'transparent',
-          color: colors.textSecondary,
-          border: `1px solid ${colors.textSecondary}`,
-          borderRadius: radius.sm,
-          fontSize: 13,
-          fontWeight: 500,
-          transition: 'all 0.2s',
-        }}
+        className="header-logout"
       >
-        Cerrar Sesion
+        Cerrar sesión
       </button>
     </header>
   )

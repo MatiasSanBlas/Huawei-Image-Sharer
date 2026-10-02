@@ -114,6 +114,12 @@ export default function DashboardPage() {
   const [filterYear, setFilterYear] = useState('')
   const [filterSQL, setFilterSQL] = useState<boolean | null>(null)
 
+  useEffect(() => {
+    if (message?.type !== 'ok') return
+    const timeout = setTimeout(() => setMessage(null), 10000)
+    return () => clearTimeout(timeout)
+  }, [message])
+
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token || ''
@@ -333,9 +339,10 @@ export default function DashboardPage() {
   const selectFilterStyle: React.CSSProperties = {
     ...inputStyle,
     boxSizing: 'border-box',
+    width: 'auto',
     minWidth: 130,
     appearance: 'none' as any,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2386909C' stroke-width='1.5'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23626B78' stroke-width='1.5'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 10px center',
     paddingRight: 28,
@@ -348,68 +355,33 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: colors.pageBg }}>
       <Header />
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 48px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <main className="dashboard-main" id="main-content">
+        <div className="dashboard-heading">
           <div>
-            <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 600, color: colors.textPrimary }}>
-              Imagenes de SO
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: colors.textSecondary }}>
-              {filteredImages.length} de {images.length} imagen{images.length !== 1 ? 'es' : ''}
-            </p>
+            <span className="dashboard-kicker">Image Management Service</span>
+            <h1>Imágenes de sistema operativo</h1>
+            <p>Explorá y compartí tus imágenes privadas · {filteredImages.length} de {images.length} imagen{images.length !== 1 ? 'es' : ''}</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {selected.size > 0 && (
-              <span style={{
-                padding: '4px 12px',
-                background: colors.primaryLight,
-                color: colors.primary,
-                borderRadius: 20,
-                fontSize: 13,
-                fontWeight: 500,
-              }}>
-                {selected.size} seleccionada{selected.size !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
+          {selected.size > 0 && <span className="selection-count">{selected.size} seleccionada{selected.size !== 1 ? 's' : ''}</span>}
         </div>
 
-        {message && (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: '12px 16px',
-              borderRadius: radius.md,
-              background: message.type === 'ok' ? colors.successBg : colors.errorBg,
-              color: message.type === 'ok' ? '#0E7B00' : colors.error,
-              fontSize: 13,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{message.type === 'ok' ? '\u2713' : '\u2717'}</span>
-            {message.text}
-          </div>
-        )}
-
         {!loading && images.length > 0 && (
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: colors.textSecondary, fontSize: 14, pointerEvents: 'none' }}>
-                {'\u2315'}
-              </span>
+          <div className="filter-panel" aria-label="Filtros de imágenes">
+            <div className="search-field">
+              <span className="search-icon" aria-hidden="true">⌕</span>
               <input
+                aria-label="Buscar imágenes por nombre o ID"
+                name="image-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre o ID..."
-                style={{ ...inputStyle, boxSizing: 'border-box', paddingLeft: 32 }}
+                placeholder="Buscar por nombre o ID"
+                style={inputStyle}
               />
             </div>
 
             {filterOptions.regions.length > 1 && (
-              <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={selectFilterStyle}>
+              <select aria-label="Filtrar por región" value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} style={selectFilterStyle}>
                 <option value="">Región: Todas</option>
                 {filterOptions.regions.map((r) => (
                   <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
@@ -418,7 +390,7 @@ export default function DashboardPage() {
             )}
 
             {filterOptions.editions.length > 1 && (
-              <select value={filterEdition} onChange={(e) => setFilterEdition(e.target.value)} style={selectFilterStyle}>
+              <select aria-label="Filtrar por edición" value={filterEdition} onChange={(e) => setFilterEdition(e.target.value)} style={selectFilterStyle}>
                 <option value="">Edición: Todas</option>
                 {filterOptions.editions.map((e) => (
                   <option key={e} value={e}>{e}</option>
@@ -427,7 +399,7 @@ export default function DashboardPage() {
             )}
 
             {filterOptions.years.length > 1 && (
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={selectFilterStyle}>
+              <select aria-label="Filtrar por año" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={selectFilterStyle}>
                 <option value="">Año: Todos</option>
                 {filterOptions.years.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -450,18 +422,9 @@ export default function DashboardPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                style={{
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  color: colors.textSecondary,
-                  border: 'none',
-                  borderRadius: radius.sm,
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  textDecoration: 'underline',
-                }}
+                className="clear-filters"
               >
-                Limpiar
+                Limpiar filtros
               </button>
             )}
           </div>
@@ -470,25 +433,28 @@ export default function DashboardPage() {
         {loading && <Spinner />}
 
         {!loading && images.length === 0 && !message && (
-          <div style={{ textAlign: 'center', padding: 48, color: colors.textSecondary, fontSize: 14 }}>
-            No se encontraron imagenes privadas.
+          <div className="empty-state">
+            <strong>No hay imágenes privadas disponibles</strong>
+            Cuando haya imágenes en tu cuenta de Huawei Cloud, aparecerán acá.
           </div>
         )}
 
         {!loading && images.length > 0 && filteredImages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 48, color: colors.textSecondary, fontSize: 14 }}>
-            No hay imagenes que coincidan con los filtros.
+          <div className="empty-state">
+            <strong>No encontramos imágenes con esos filtros</strong>
+            Probá otra búsqueda o limpiá los filtros.
           </div>
         )}
 
         {!loading && filteredImages.length > 0 && (
           <>
-            <div style={{ background: colors.cardBg, borderRadius: radius.md, boxShadow: shadow.card, overflow: 'hidden' }}>
+            <div className="data-panel" role="region" aria-label="Listado de imágenes" tabIndex={0}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#FAFBFC', borderBottom: `1px solid ${colors.border}` }}>
                     <th style={{ padding: '12px 16px', textAlign: 'left', width: 40 }}>
                       <input
+                        aria-label="Seleccionar todas las imágenes visibles"
                         type="checkbox"
                         checked={selected.size === filteredImages.length && filteredImages.length > 0}
                         onChange={toggleAll}
@@ -517,6 +483,7 @@ export default function DashboardPage() {
                     >
                       <td style={{ padding: '10px 16px' }}>
                         <input
+                          aria-label={`Seleccionar imagen ${img.name}`}
                           type="checkbox"
                           checked={selected.has(img.id)}
                           onChange={() => toggleSelect(img.id)}
@@ -533,7 +500,7 @@ export default function DashboardPage() {
                         )}
                       </td>
                       <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: 12, color: colors.textSecondary }}>
-                        {img.id.slice(0, 8)}...
+                        <span title={img.id}>{img.id.slice(0, 8)}…</span>
                       </td>
                       <td style={{ padding: '10px 16px', fontSize: 13, color: colors.textPrimary }}>{img.osVersion || 'N/A'}</td>
                       <td style={{ padding: '10px 16px', fontSize: 13, color: colors.textPrimary }}>{formatBytes(img.size)}</td>
@@ -557,28 +524,17 @@ export default function DashboardPage() {
               </table>
             </div>
 
-            <div
-              style={{
-                marginTop: 20,
-                padding: 24,
-                background: colors.cardBg,
-                borderRadius: radius.md,
-                boxShadow: shadow.card,
-              }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 15, fontWeight: 600, color: colors.textPrimary }}>
-                Compartir imagenes
-              </h3>
+            <section className="share-panel" aria-labelledby="share-title">
+              <h2 id="share-title">Compartir imágenes</h2>
+              <p>Seleccioná las imágenes de la tabla y especificá el destino.</p>
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div style={{ flex: '0 0 200px' }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-                    Tipo de destino
-                  </label>
+              <div className="share-fields">
+                <div className="field target-type">
+                  <label htmlFor="target-type">Tipo de destino</label>
                   <select
+                    id="target-type"
                     value={targetType}
                     onChange={(e) => setTargetType(e.target.value as TargetType)}
-                    style={{ ...inputStyle, boxSizing: 'border-box' }}
                   >
                     {TARGET_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -588,44 +544,53 @@ export default function DashboardPage() {
                   </select>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 240 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-                    Identificador de destino
-                  </label>
+                <div className="field">
+                  <label htmlFor="target-value">Identificador de destino</label>
                   <input
+                    id="target-value"
+                    name="target-value"
                     type="text"
                     value={targetValue}
                     onChange={(e) => setTargetValue(e.target.value)}
                     placeholder={selectedPlaceholder}
-                    style={{ ...inputStyle, boxSizing: 'border-box' }}
+                    autoComplete="off"
+                    spellCheck={false}
                   />
                 </div>
 
                 <button
                   onClick={handleShare}
                   disabled={sharing || selected.size === 0}
-                  style={{
-                    padding: '10px 28px',
-                    background: sharing || selected.size === 0 ? colors.disabledBg : colors.primary,
-                    color: sharing || selected.size === 0 ? colors.disabled : colors.textWhite,
-                    border: 'none',
-                    borderRadius: radius.sm,
-                    cursor: sharing || selected.size === 0 ? 'not-allowed' : 'pointer',
-                    fontWeight: 500,
-                    fontSize: 14,
-                    whiteSpace: 'nowrap',
-                    transition: 'background 0.2s',
-                  }}
+                  className="primary-action"
                 >
-                  {sharing ? 'Compartiendo...' : 'Compartir Imagenes'}
+                  {sharing ? 'Compartiendo…' : 'Compartir imágenes'}
                 </button>
               </div>
-            </div>
+            </section>
           </>
         )}
 
         {userRole === 'admin' && <AdminPanel />}
-      </div>
+      </main>
+      {message && (
+        <div
+          className={`snackbar snackbar--${message.type}`}
+          role={message.type === 'err' ? 'alert' : 'status'}
+        >
+          <span className="snackbar-icon" aria-hidden="true">
+            {message.type === 'ok' ? '✓' : '!'}
+          </span>
+          <span className="snackbar-text">{message.text}</span>
+          <button
+            type="button"
+            className="snackbar-close"
+            aria-label="Cerrar aviso"
+            onClick={() => setMessage(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   )
 }

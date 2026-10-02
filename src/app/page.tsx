@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client'
 import { cookies } from 'next/headers'
 
 export default async function RootPage() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const token = cookieStore.get('sb-access-token')?.value
 
   if (token) {

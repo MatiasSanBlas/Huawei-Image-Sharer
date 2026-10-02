@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { colors, radius, shadow } from '@/lib/theme'
 
 export default function PendingPage() {
   const router = useRouter()
@@ -88,36 +87,32 @@ export default function PendingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBg }}>
-      <div style={{ width: 400, padding: '40px 32px', background: colors.cardBg, borderRadius: radius.lg, boxShadow: shadow.card, textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, background: '#FFF3E0', borderRadius: radius.md, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#E65100' }}>
-          {'⏳'}
+    <main className="status-page" id="main-content">
+      <div className="status-card">
+        <div className="brand" aria-label="Huawei Cloud">
+          <span className="brand-mark" aria-hidden="true">H</span>
+          <span className="brand-name">HUAWEI <span>CLOUD</span></span>
         </div>
-        <h1 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 600, color: colors.textPrimary }}>
-          Cuenta Pendiente de Aprobacion
-        </h1>
-        <p style={{ margin: '0 0 8px', fontSize: 14, color: colors.textSecondary }}>
-          Tu solicitud de registro fue recibida. Un administrador revisara tu cuenta y la aprobara a la brevedad.
-        </p>
-        <p style={{ margin: '0 0 24px', fontSize: 12, color: colors.textSecondary }}>
-          Esta pagina se actualizara automaticamente cuando tu cuenta sea aprobada.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div className="status-icon" aria-hidden="true">⌛</div>
+        <h1>Tu cuenta está pendiente de aprobación</h1>
+        <p>Recibimos tu solicitud. Un administrador revisará tu cuenta para habilitar el acceso.</p>
+        <p>Esta página se actualizará automáticamente cuando cambie el estado de tu cuenta.</p>
+        <div className="status-actions">
           <button
             onClick={handleManualCheck}
             disabled={checking}
-            style={{ padding: '10px 24px', background: checking ? colors.disabledBg : colors.primary, color: checking ? colors.disabled : colors.textWhite, border: 'none', borderRadius: radius.sm, cursor: checking ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 500, width: '100%' }}
+            className="primary-action"
           >
-            {checking ? 'Verificando...' : 'Verificar Estado'}
+            {checking ? 'Verificando…' : 'Verificar estado'}
           </button>
           <button
             onClick={handleLogout}
-            style={{ padding: '10px 24px', background: 'transparent', color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: radius.sm, cursor: 'pointer', fontSize: 14, fontWeight: 500, width: '100%' }}
+            className="secondary-action"
           >
-            Cerrar Sesion
+            Cerrar sesión
           </button>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

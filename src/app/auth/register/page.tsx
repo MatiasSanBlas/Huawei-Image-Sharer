@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { colors, radius, shadow, inputStyle, primaryBtn } from '@/lib/theme'
+import AuthLayout from '@/components/AuthLayout'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -39,47 +39,40 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBg }}>
-      <div style={{ width: 400, padding: '40px 32px', background: colors.cardBg, borderRadius: radius.lg, boxShadow: shadow.card }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 48, height: 48, background: colors.primary, borderRadius: radius.md, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: colors.textWhite, fontWeight: 700 }}>
-            H
-          </div>
-          <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 600, color: colors.textPrimary }}>Crear Cuenta</h1>
-          <p style={{ margin: 0, fontSize: 14, color: colors.textSecondary }}>Huawei OS Image Sharer</p>
-        </div>
-
-        <form onSubmit={handleRegister}>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-              Email
-            </label>
+    <AuthLayout title="Crear cuenta" description="Solicitá acceso para compartir imágenes en Huawei Cloud.">
+        <form className="auth-form" onSubmit={handleRegister}>
+          <div className="field">
+            <label htmlFor="register-email">Correo electrónico</label>
             <input
+              id="register-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="tu@email.com"
-              style={{ ...inputStyle, boxSizing: 'border-box' }}
+              autoComplete="email"
+              spellCheck={false}
+              placeholder="nombre@empresa.com"
             />
           </div>
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary }}>
-              Contraseña
-            </label>
+          <div className="field">
+            <label htmlFor="register-password">Contraseña</label>
             <input
+              id="register-password"
+              name="new-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              placeholder="Mínimo 6 caracteres"
-              style={{ ...inputStyle, boxSizing: 'border-box' }}
+              autoComplete="new-password"
+              placeholder="Ingresá una contraseña"
             />
+            <span className="field-help">Usá al menos 6 caracteres.</span>
           </div>
 
           {error && (
-            <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: radius.sm, background: colors.errorBg, color: colors.error, fontSize: 13 }}>
+            <div className="form-alert" role="status">
               {error}
             </div>
           )}
@@ -87,21 +80,15 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            style={{
-              ...primaryBtn,
-              opacity: loading ? 0.7 : 1,
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
+            className="primary-action"
           >
-            {loading ? 'Registrando...' : 'Registrarse'}
+            {loading ? 'Registrando…' : 'Solicitar acceso'}
           </button>
         </form>
 
-        <p style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: colors.textSecondary }}>
-          Ya tienes cuenta?{' '}
-          <a href="/auth/login" style={{ color: colors.primary, textDecoration: 'none', fontWeight: 500 }}>Inicia Sesión</a>
+        <p className="auth-switch">
+          ¿Ya tenés cuenta? <a href="/auth/login">Iniciar sesión</a>
         </p>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }
