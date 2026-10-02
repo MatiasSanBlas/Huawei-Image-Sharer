@@ -334,6 +334,7 @@ export default function DashboardPage() {
   }
 
   const hasActiveFilters = searchQuery || filterRegion || filterEdition || filterYear || filterSQL !== null
+  const visibleSelectionCount = filteredImages.filter((img) => selected.has(img.id)).length
   const selectedPlaceholder = TARGET_OPTIONS.find((o) => o.value === targetType)?.placeholder || ''
 
   const selectFilterStyle: React.CSSProperties = {
@@ -355,7 +356,7 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: colors.pageBg }}>
       <Header />
-      <main className="dashboard-main" id="main-content">
+      <main className={`dashboard-main${visibleSelectionCount > 0 ? ' dashboard-main--with-selection' : ''}`} id="main-content">
         <div className="dashboard-heading">
           <div>
             <span className="dashboard-kicker">Image Management Service</span>
@@ -560,7 +561,7 @@ export default function DashboardPage() {
 
                 <button
                   onClick={handleShare}
-                  disabled={sharing || selected.size === 0}
+                  disabled={sharing || visibleSelectionCount === 0}
                   className="primary-action"
                 >
                   {sharing ? 'Compartiendo…' : 'Compartir imágenes'}
@@ -572,9 +573,25 @@ export default function DashboardPage() {
 
         {userRole === 'admin' && <AdminPanel />}
       </main>
+      {visibleSelectionCount > 0 && (
+        <div className="selection-dock" role="region" aria-label="Imágenes seleccionadas">
+          <div className="selection-dock-count">
+            <span className="selection-dock-dot" aria-hidden="true" />
+            <strong>{visibleSelectionCount}</strong> imagen{visibleSelectionCount !== 1 ? 'es' : ''} seleccionada{visibleSelectionCount !== 1 ? 's' : ''}
+          </div>
+          <div className="selection-dock-actions">
+            <button type="button" className="selection-dock-clear" onClick={() => setSelected(new Set())}>
+              Quitar selección
+            </button>
+            <a className="selection-dock-next" href="#share-title">
+              Elegir destino
+            </a>
+          </div>
+        </div>
+      )}
       {message && (
         <div
-          className={`snackbar snackbar--${message.type}`}
+          className={`snackbar snackbar--${message.type}${visibleSelectionCount > 0 ? ' snackbar--above-dock' : ''}`}
           role={message.type === 'err' ? 'alert' : 'status'}
         >
           <span className="snackbar-icon" aria-hidden="true">
