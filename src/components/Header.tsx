@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import BrandLogo from './BrandLogo'
 
 export default function Header() {
   const router = useRouter()
@@ -15,10 +16,7 @@ export default function Header() {
   return (
     <header className="site-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
-        <div className="brand" aria-label="Huawei Cloud">
-          <span className="brand-mark" aria-hidden="true">H</span>
-          <span className="brand-name">HUAWEI <span>CLOUD</span></span>
-        </div>
+        <BrandLogo />
         <span className="header-product">Image Sharer</span>
       </div>
 

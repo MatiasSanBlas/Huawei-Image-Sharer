@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function DeniedPage() {
   const router = useRouter()
@@ -15,10 +16,7 @@ export default function DeniedPage() {
   return (
     <main className="status-page" id="main-content">
       <div className="status-card">
-        <div className="brand" aria-label="Huawei Cloud">
-          <span className="brand-mark" aria-hidden="true">H</span>
-          <span className="brand-name">HUAWEI <span>CLOUD</span></span>
-        </div>
+        <BrandLogo />
         <div className="status-icon denied" aria-hidden="true">×</div>
         <h1>No se aprobó tu cuenta</h1>
         <p>Tu solicitud fue revisada. Si creés que se trata de un error, contactá a un administrador.</p>

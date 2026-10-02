@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function PendingPage() {
   const router = useRouter()
@@ -89,10 +90,7 @@ export default function PendingPage() {
   return (
     <main className="status-page" id="main-content">
       <div className="status-card">
-        <div className="brand" aria-label="Huawei Cloud">
-          <span className="brand-mark" aria-hidden="true">H</span>
-          <span className="brand-name">HUAWEI <span>CLOUD</span></span>
-        </div>
+        <BrandLogo />
         <div className="status-icon" aria-hidden="true">⌛</div>
         <h1>Tu cuenta está pendiente de aprobación</h1>
         <p>Recibimos tu solicitud. Un administrador revisará tu cuenta para habilitar el acceso.</p>
