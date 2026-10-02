@@ -169,7 +169,19 @@ button:disabled { cursor: not-allowed; }
 .snackbar--err { border-color: #f0d8dc; border-left-color: var(--huawei-red); }
 .snackbar-icon { display: grid; flex: 0 0 22px; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #e6f6eb; color: #167144; font-size: 14px; font-weight: 800; }
 .snackbar--err .snackbar-icon { background: #fff0f2; color: var(--huawei-red); }
+.snackbar--busy .snackbar-icon { background: #fff0f2; color: var(--huawei-red); }
 .snackbar-text { flex: 1; min-width: 0; padding-top: 1px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.share-progress-content { flex: 1; min-width: 0; }
+.share-progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; font-size: 14px; }
+.share-progress-heading strong { font-weight: 700; }
+.share-progress-heading span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.share-progress-track { position: relative; height: 8px; overflow: hidden; border-radius: 99px; background: #edf0f3; }
+.share-progress-fill { display: block; height: 100%; border-radius: inherit; background: #228454; transition: width .2s ease-out; }
+.snackbar--err .share-progress-fill { background: var(--huawei-red); }
+.share-progress-activity { position: absolute; top: 0; bottom: 0; left: -30%; width: 30%; background: linear-gradient(90deg, transparent, rgba(199, 0, 11, .45), transparent); animation: progress-sweep 1.4s ease-in-out infinite; }
+.share-progress-content p { margin: 9px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.share-progress-content .share-progress-detail { color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+@keyframes progress-sweep { to { transform: translateX(500%); } }
 .snackbar-close { flex: 0 0 28px; width: 28px; height: 28px; margin: -3px -4px -3px 0; border: 0; border-radius: 6px; background: transparent; color: #66707d; font-size: 22px; line-height: 1; cursor: pointer; }
 .snackbar-close:hover { background: #f2f3f5; color: var(--ink); }
 .filter-panel, .data-panel, .share-panel, .admin-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 18px rgba(35, 43, 56, .035); }

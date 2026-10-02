@@ -7,6 +7,7 @@ import Header from '@/components/Header'
 import AdminPanel from '@/components/AdminPanel'
 import { colors, radius, shadow, inputStyle } from '@/lib/theme'
 import { REGION_LABELS } from '@/lib/allowed-images'
+import { readShareStream, type ShareResult, type ShareStreamEvent } from '@/lib/share-stream'
 
 interface Image {
   id: string
@@ -25,6 +26,15 @@ interface Image {
 }
 
 type TargetType = 'project' | 'domain' | 'ou_urn'
+
+interface ShareProgress {
+  total: number
+  completed: number
+  succeeded: number
+  failed: number
+  region: string | null
+  phase: 'preparing' | 'sending' | 'finalizing' | 'complete' | 'interrupted'
+}
 
 const TARGET_OPTIONS: { value: TargetType; label: string; placeholder: string }[] = [
   { value: 'project', label: 'Project ID', placeholder: 'ej: 0a87231e6a00...' },
@@ -102,6 +112,7 @@ export default function DashboardPage() {
   const [targetValue, setTargetValue] = useState('')
   const [loading, setLoading] = useState(true)
   const [sharing, setSharing] = useState(false)
+  const [shareProgress, setShareProgress] = useState<ShareProgress | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [hoverRow, setHoverRow] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string>('user')
@@ -116,7 +127,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (message?.type !== 'ok') return
-    const timeout = setTimeout(() => setMessage(null), 10000)
+    const timeout = setTimeout(() => {
+      setMessage(null)
+      setShareProgress(null)
+    }, 10000)
     return () => clearTimeout(timeout)
   }, [message])
 
@@ -267,27 +281,33 @@ export default function DashboardPage() {
 
   async function handleShare() {
     if (!targetValue.trim()) {
+      setShareProgress(null)
       setMessage({ type: 'err', text: 'Ingresa el identificador de destino' })
       return
     }
-    if (selected.size === 0) {
+    const items = filteredImages
+      .filter((img) => selected.has(img.id))
+      .map((img) => ({ imageId: img.id, region: img.region }))
+
+    if (items.length === 0) {
+      setShareProgress(null)
       setMessage({ type: 'err', text: 'Selecciona al menos una imagen' })
       return
     }
 
     setSharing(true)
     setMessage(null)
-    const token = await getToken()
-
-    const items = filteredImages
-      .filter((img) => selected.has(img.id))
-      .map((img) => ({ imageId: img.id, region: img.region }))
+    setShareProgress({ total: items.length, completed: 0, succeeded: 0, failed: 0, region: null, phase: 'preparing' })
 
     try {
+      const token = await getToken()
+      if (!token) throw new Error('No hay sesión activa')
+
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/x-ndjson',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -297,16 +317,47 @@ export default function DashboardPage() {
         }),
       })
 
-      const data = await res.json()
-
       if (!res.ok) {
-        setMessage({ type: 'err', text: data.error || `Error ${res.status}` })
-        setSharing(false)
-        return
+        const data = await res.json()
+        throw new Error(data.error || `Error ${res.status}`)
       }
 
-      const succeeded = data.results?.filter((r: any) => r.success).length || 0
-      const failed = data.results?.filter((r: any) => !r.success).length || 0
+      let results: ShareResult[]
+      if (res.headers.get('content-type')?.includes('application/x-ndjson')) {
+        results = await readShareStream(res, (event: ShareStreamEvent) => {
+          if (event.type === 'region') {
+            setShareProgress((current) => current && { ...current, region: event.region, phase: 'sending' })
+          } else if (event.type === 'progress') {
+            setShareProgress((current) => current && {
+              ...current,
+              completed: event.completed,
+              succeeded: event.succeeded,
+              failed: event.failed,
+              region: event.region,
+              phase: event.completed === event.total ? 'finalizing' : 'sending',
+            })
+          }
+        })
+      } else {
+        const data = await res.json()
+        if (!Array.isArray(data.results)) throw new Error('El servidor no confirmó el resultado del envío')
+        results = data.results
+      }
+
+      if (results.length !== items.length) {
+        throw new Error('El servidor no confirmó todas las imágenes')
+      }
+
+      const succeeded = results.filter((result) => result.success).length
+      const failed = results.length - succeeded
+      setShareProgress((current) => current && {
+        ...current,
+        completed: results.length,
+        succeeded,
+        failed,
+        region: null,
+        phase: 'complete',
+      })
 
       if (failed === 0) {
         setMessage({ type: 'ok', text: `${succeeded} imagen(es) compartidas exitosamente` })
@@ -319,6 +370,7 @@ export default function DashboardPage() {
         })
       }
     } catch (err: any) {
+      setShareProgress((current) => current && { ...current, phase: 'interrupted' })
       setMessage({ type: 'err', text: err.message || 'Error de conexion' })
     } finally {
       setSharing(false)
@@ -335,6 +387,13 @@ export default function DashboardPage() {
 
   const hasActiveFilters = searchQuery || filterRegion || filterEdition || filterYear || filterSQL !== null
   const visibleSelectionCount = filteredImages.filter((img) => selected.has(img.id)).length
+  const showSelectionDock = visibleSelectionCount > 0 && !sharing
+  const progressPercent = shareProgress ? Math.round(shareProgress.completed / shareProgress.total * 100) : 0
+  const progressTitle = shareProgress?.phase === 'preparing' ? 'Preparando envío'
+    : shareProgress?.phase === 'sending' ? `Compartiendo en ${REGION_LABELS[shareProgress.region || ''] || shareProgress.region || 'Huawei Cloud'}`
+    : shareProgress?.phase === 'finalizing' ? 'Guardando resultados'
+    : shareProgress?.phase === 'interrupted' ? 'Envío interrumpido'
+    : shareProgress?.failed ? 'Envío completado con errores' : 'Imágenes compartidas'
   const selectedPlaceholder = TARGET_OPTIONS.find((o) => o.value === targetType)?.placeholder || ''
 
   const selectFilterStyle: React.CSSProperties = {
@@ -356,7 +415,7 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: colors.pageBg }}>
       <Header />
-      <main className={`dashboard-main${visibleSelectionCount > 0 ? ' dashboard-main--with-selection' : ''}`} id="main-content">
+      <main className={`dashboard-main${showSelectionDock ? ' dashboard-main--with-selection' : ''}`} id="main-content">
         <div className="dashboard-heading">
           <div>
             <span className="dashboard-kicker">Image Management Service</span>
@@ -536,6 +595,7 @@ export default function DashboardPage() {
                     id="target-type"
                     value={targetType}
                     onChange={(e) => setTargetType(e.target.value as TargetType)}
+                    disabled={sharing}
                   >
                     {TARGET_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -553,6 +613,7 @@ export default function DashboardPage() {
                     type="text"
                     value={targetValue}
                     onChange={(e) => setTargetValue(e.target.value)}
+                    disabled={sharing}
                     placeholder={selectedPlaceholder}
                     autoComplete="off"
                     spellCheck={false}
@@ -573,7 +634,7 @@ export default function DashboardPage() {
 
         {userRole === 'admin' && <AdminPanel />}
       </main>
-      {visibleSelectionCount > 0 && (
+      {showSelectionDock && (
         <div className="selection-dock" role="region" aria-label="Imágenes seleccionadas">
           <div className="selection-dock-count">
             <span className="selection-dock-dot" aria-hidden="true" />
@@ -589,23 +650,49 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      {message && (
+      {(message || shareProgress) && (
         <div
-          className={`snackbar snackbar--${message.type}${visibleSelectionCount > 0 ? ' snackbar--above-dock' : ''}`}
-          role={message.type === 'err' ? 'alert' : 'status'}
+          className={`snackbar snackbar--${message?.type === 'err' || shareProgress?.phase === 'interrupted' || !!shareProgress?.failed ? 'err' : 'ok'}${showSelectionDock ? ' snackbar--above-dock' : ''}${shareProgress ? ' snackbar--progress' : ''}${sharing ? ' snackbar--busy' : ''}`}
+          role={message?.type === 'err' || shareProgress?.phase === 'interrupted' ? 'alert' : 'status'}
         >
           <span className="snackbar-icon" aria-hidden="true">
-            {message.type === 'ok' ? '✓' : '!'}
+            {sharing ? '↗' : message?.type === 'err' ? '!' : '✓'}
           </span>
-          <span className="snackbar-text">{message.text}</span>
-          <button
-            type="button"
-            className="snackbar-close"
-            aria-label="Cerrar aviso"
-            onClick={() => setMessage(null)}
-          >
-            ×
-          </button>
+          {shareProgress ? (
+            <div className="share-progress-content">
+              <div className="share-progress-heading">
+                <strong>{progressTitle}</strong>
+                <span>{progressPercent}%</span>
+              </div>
+              <div
+                className="share-progress-track"
+                role="progressbar"
+                aria-label="Progreso del envío"
+                aria-valuemin={0}
+                aria-valuemax={shareProgress.total}
+                aria-valuenow={shareProgress.completed}
+                aria-valuetext={`${shareProgress.completed} de ${shareProgress.total} ${shareProgress.total === 1 ? 'imagen procesada' : 'imágenes procesadas'}`}
+              >
+                <span className="share-progress-fill" style={{ width: `${progressPercent}%` }} />
+                {sharing && progressPercent < 100 && <span className="share-progress-activity" aria-hidden="true" />}
+              </div>
+              <p>{shareProgress.completed} de {shareProgress.total} {shareProgress.total === 1 ? 'imagen' : 'imágenes'} · {shareProgress.succeeded} correctas · {shareProgress.failed} fallidas</p>
+              {shareProgress.phase === 'interrupted' && <p>Verificá el estado de las imágenes antes de reintentar.</p>}
+              {message && <p className="share-progress-detail">{message.text}</p>}
+            </div>
+          ) : (
+            <span className="snackbar-text">{message?.text}</span>
+          )}
+          {!sharing && (
+            <button
+              type="button"
+              className="snackbar-close"
+              aria-label="Cerrar aviso"
+              onClick={() => { setMessage(null); setShareProgress(null) }}
+            >
+              ×
+            </button>
+          )}
         </div>
       )}
     </div>
